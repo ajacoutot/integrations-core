@@ -3,6 +3,7 @@
 # Licensed under Simplified BSD License (see LICENSE)
 
 import os
+import time
 
 import mock
 import pytest
@@ -171,3 +172,59 @@ def test_removing_host():
     check.check(instance)
     # No new warnings produced
     assert warnings == [msg, msg, msg, msg]
+
+
+@mock.patch("datadog_checks.snmp.snmp.retrieve_value")
+def test_cache_discovered_host(retrieve_mock):
+    instance = common.generate_instance_config(common.SUPPORTED_METRIC_TYPES)
+    instance.pop('ip_address')
+    instance['network_address'] = '192.168.0.0/24'
+
+    retrieve_mock.return_value = '["192.168.0.1"]'
+    check = SnmpCheck('snmp', {}, [instance])
+    check.check(instance)
+
+    assert '192.168.0.1' in check._config.discovered_instances
+
+
+@mock.patch("datadog_checks.snmp.snmp.retrieve_value")
+@mock.patch("datadog_checks.snmp.snmp.store_value")
+def test_cache_corrupted(store_mock, retrieve_mock):
+    instance = common.generate_instance_config(common.SUPPORTED_METRIC_TYPES)
+    instance.pop('ip_address')
+    instance['network_address'] = '192.168.0.0/24'
+    retrieve_mock.return_value = '["192.168.0."]'
+    check = SnmpCheck('snmp', {}, [instance])
+    check.check(instance)
+
+    assert not check._config.discovered_instances
+    store_mock.assert_called_once_with('', '[]')
+
+
+@mock.patch("datadog_checks.snmp.snmp.retrieve_value")
+@mock.patch("datadog_checks.snmp.snmp.store_value")
+def test_cache_building(store_mock, retrieve_mock):
+    instance = common.generate_instance_config(common.SUPPORTED_METRIC_TYPES)
+    instance.pop('ip_address')
+
+    retrieve_mock.return_value = '[]'
+
+    discovered_instance = instance.copy()
+    discovered_instance['ip_address'] = '192.168.0.1'
+
+    instance['network_address'] = '192.168.0.0/31'
+
+    check = SnmpCheck('snmp', {}, [instance])
+
+    check._config.discovered_instances['192.168.0.1'] = InstanceConfig(discovered_instance, None, [], '', {}, {})
+    check._start_discovery()
+
+    try:
+        for _ in range(30):
+            if store_mock.call_count:
+                break
+            time.sleep(1)
+    finally:
+        check._running = False
+
+    store_mock.assert_called_once_with('', '["192.168.0.1"]')

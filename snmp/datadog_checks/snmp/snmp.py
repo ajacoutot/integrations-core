@@ -1,6 +1,8 @@
 # (C) Datadog, Inc. 2010-2019
 # All rights reserved
 # Licensed under Simplified BSD License (see LICENSE)
+import ipaddress
+import json
 import threading
 import time
 from collections import defaultdict
@@ -18,6 +20,17 @@ from datadog_checks.base import AgentCheck, ConfigurationError, is_affirmative
 from datadog_checks.base.errors import CheckException
 
 from .config import InstanceConfig
+
+try:
+    from datadog_agent import store_value, retrieve_value
+except ImportError:
+
+    def store_value(value, key):
+        pass
+
+    def retrieve_value(value):
+        return ''
+
 
 # Additional types that are not part of the SNMP protocol. cf RFC 2856
 CounterBasedGauge64, ZeroBasedCounter64 = builder.MibBuilder().importSymbols(
@@ -48,6 +61,7 @@ class SnmpCheck(AgentCheck):
 
     SC_STATUS = 'snmp.can_check'
     _running = True
+    _thread = None
     _NON_REPEATERS = 0
     _MAX_REPETITIONS = 25
 
@@ -86,10 +100,6 @@ class SnmpCheck(AgentCheck):
             self.profiles,
             self.profiles_by_oid,
         )
-        if self._config.ip_network:
-            self._thread = threading.Thread(target=self.discover_instances, name=self.name)
-            self._thread.daemon = True
-            self._thread.start()
 
     def _get_instance_key(self, instance):
         key = instance.get('name')
@@ -139,6 +149,9 @@ class SnmpCheck(AgentCheck):
                     profile = self.profiles_by_oid[sys_object_oid]
                     host_config.refresh_with_profile(self.profiles[profile], self.warning)
                 config.discovered_instances[host] = host_config
+
+            store_value(self.check_id, json.dumps(list(config.discovered_instances)))
+
             time_elapsed = time.time() - start_time
             if discovery_interval - time_elapsed > 0:
                 time.sleep(discovery_interval - time_elapsed)
@@ -315,13 +328,43 @@ class SnmpCheck(AgentCheck):
             all_binds.extend(var_binds_table)
         return all_binds, error
 
+    def _start_discovery(self):
+        cache = retrieve_value(self.check_id)
+        if cache:
+            hosts = json.loads(cache)
+            for host in hosts:
+                try:
+                    ipaddress.ip_address(host)
+                except ValueError:
+                    store_value(self.check_id, json.dumps([]))
+                    break
+                instance = self.instance.copy()
+                instance.pop('network_address')
+                instance['ip_address'] = host
+
+                host_config = InstanceConfig(
+                    instance,
+                    self.warning,
+                    self.init_config.get('global_metrics', []),
+                    self.mibs_path,
+                    self.profiles,
+                    self.profiles_by_oid,
+                )
+                self._config.discovered_instances[host] = host_config
+
+        self._thread = threading.Thread(target=self.discover_instances, name=self.name)
+        self._thread.daemon = True
+        self._thread.start()
+
     def check(self, instance):
         """
         Perform two series of SNMP requests, one for all that have MIB associated
         and should be looked up and one for those specified by oids.
         """
         config = self._config
-        if instance.get('network_address'):
+        if self._config.ip_network:
+            if self._thread is None:
+                self._start_discovery()
             for host, discovered in list(config.discovered_instances.items()):
                 if self._check_with_config(discovered):
                     config.failing_instances[host] += 1
