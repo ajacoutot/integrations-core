@@ -197,6 +197,18 @@ class RequestsWrapper(object):
                 hostname_override=config['kerberos_hostname'],
                 principal=config['kerberos_principal'],
             )
+        
+        auth_type = None
+        if config['auth_type']:
+            if config['auth_type'] == 'digest' or config['auth_type'] == 'basic':
+                auth_type = config['auth_type']
+            else:
+                raise ConfigurationError(
+                '{} is an unsupported value for auth_type, use basic or digest'.format(
+                    config['auth_type']
+                )
+            )
+            
 
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         verify = True
@@ -244,6 +256,7 @@ class RequestsWrapper(object):
         # Default options
         self.options = {
             'auth': auth,
+            'auth_type': auth_type
             'cert': cert,
             'headers': headers,
             'proxies': proxies,
