@@ -256,7 +256,7 @@ class RequestsWrapper(object):
         # Default options
         self.options = {
             'auth': auth,
-            'auth_type': auth_type
+            'auth_type': auth_type,
             'cert': cert,
             'headers': headers,
             'proxies': proxies,
