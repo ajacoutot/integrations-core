@@ -342,6 +342,27 @@ class TestAuth:
 
             m.assert_called_once_with('domain\\user', 'pass')
 
+class TestAuthtype:
+    def test_config_default(self):
+        instance = {}
+        init_config = {}
+        http = RequestsWrapper(instance, init_config) 
+
+        assert http.options['auth_type'] is None
+
+    def test_config_basic(self):
+        instance = {'auth_type': 'basic'}
+        init_config = {}
+        http = RequestsWrapper(instance, init_config)
+
+        assert http.options['auth_type'] == 'basic'
+    
+    def test_config_digest(self):
+        instance = {'auth_type': 'digest'}
+        init_config = {}
+        http = RequestsWrapper(instance, init_config)
+
+        assert http.options['auth_type'] == 'digest'
 
 class TestProxies:
     def test_config_default(self):
