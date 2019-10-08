@@ -199,7 +199,7 @@ class RequestsWrapper(object):
             )
         
         auth_type = None
-        if config['auth_type']:
+        if 'auth_type' in config:
             if config['auth_type'] == 'digest' or config['auth_type'] == 'basic':
                 auth_type = config['auth_type']
             else:
@@ -208,7 +208,6 @@ class RequestsWrapper(object):
                     config['auth_type']
                 )
             )
-            
 
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
         verify = True
