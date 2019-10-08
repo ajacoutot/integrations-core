@@ -354,14 +354,14 @@ class TestAuthtype:
         instance = {'auth_type': 'basic'}
         init_config = {}
         http = RequestsWrapper(instance, init_config)
-
+        
         assert http.options['auth_type'] == 'basic'
     
     def test_config_digest(self):
         instance = {'auth_type': 'digest'}
         init_config = {}
         http = RequestsWrapper(instance, init_config)
-
+        
         assert http.options['auth_type'] == 'digest'
 
 class TestProxies:

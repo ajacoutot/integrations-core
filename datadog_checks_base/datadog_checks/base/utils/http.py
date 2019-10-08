@@ -170,7 +170,17 @@ class RequestsWrapper(object):
         auth = None
         if config['password']:
             if config['username']:
-                auth = (config['username'], config['password'])
+                if config['auth_type']:
+                    if config['auth_type'] != 'basic' or config['auth_type'] != 'digest':
+                        raise ConfigurationError(
+                            '{} is an unsupported value for auth_type, use basic or digest'.format(
+                                config['auth_type']
+                        )
+                    elif config['auth_type'] == 'digest':
+                        auth = requests.auth.HTTPDigestAuth(config['username'], config['password'])
+                else:
+                    auth = requests.auth.HTTPBasicAuth(config['username'], config['password'])
+
             elif config['ntlm_domain']:
                 ensure_ntlm()
 
@@ -196,17 +206,6 @@ class RequestsWrapper(object):
                 force_preemptive=is_affirmative(config['kerberos_force_initiate']),
                 hostname_override=config['kerberos_hostname'],
                 principal=config['kerberos_principal'],
-            )
-        
-        auth_type = None
-        if 'auth_type' in config:
-            if config['auth_type'] == 'digest' or config['auth_type'] == 'basic':
-                auth_type = config['auth_type']
-            else:
-                raise ConfigurationError(
-                '{} is an unsupported value for auth_type, use basic or digest'.format(
-                    config['auth_type']
-                )
             )
 
         # http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
@@ -255,7 +254,6 @@ class RequestsWrapper(object):
         # Default options
         self.options = {
             'auth': auth,
-            'auth_type': auth_type,
             'cert': cert,
             'headers': headers,
             'proxies': proxies,
