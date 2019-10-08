@@ -183,7 +183,7 @@ class RequestsWrapper(object):
                             '{} is an unsupported value for auth_type, use basic or digest'.format(config['auth_type'])
                         )
                 else:
-                    auth = requests.auth.HTTPBasicAuth(config['username'], config['password'])
+                    auth = (config['username'], config['password'])
 
             elif config['ntlm_domain']:
                 ensure_ntlm()
