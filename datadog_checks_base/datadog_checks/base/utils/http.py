@@ -62,6 +62,7 @@ STANDARD_FIELDS = {
     'tls_verify': True,
     'timeout': DEFAULT_TIMEOUT,
     'username': None,
+    'auth_type': None
 }
 # For any known legacy fields that may be widespread
 DEFAULT_REMAPPED_FIELDS = {
@@ -171,13 +172,16 @@ class RequestsWrapper(object):
         if config['password']:
             if config['username']:
                 if config['auth_type']:
-                    if config['auth_type'] != 'basic' or config['auth_type'] != 'digest':
-                        raise ConfigurationError(
-                            '{} is an unsupported value for auth_type, use basic or digest'.format(
-                                config['auth_type']
-                        )
+                    if config['auth_type'] == 'basic':
+                        auth = requests.auth.HTTPBasicAuth(config['username'], config['password'])
+                    
                     elif config['auth_type'] == 'digest':
-                        auth = requests.auth.HTTPDigestAuth(config['username'], config['password'])
+                        auth = requests.auth.HTTPDigestAuth(config['username'], config['password']) 
+
+                    else:
+                        raise ConfigurationError(
+                            '{} is an unsupported value for auth_type, use basic or digest'.format(config['auth_type'])
+                        )
                 else:
                     auth = requests.auth.HTTPBasicAuth(config['username'], config['password'])
 

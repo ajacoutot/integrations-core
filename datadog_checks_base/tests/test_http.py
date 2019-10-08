@@ -175,7 +175,28 @@ class TestAuth:
         init_config = {}
         http = RequestsWrapper(instance, init_config)
 
-        assert http.options['auth'] == ('user', 'pass')
+        assert isinstance(http.options['auth'], requests.auth.HTTPBasicAuth) 
+    
+    def test_config_basic_authtype(self):
+        instance = {'username': 'user', 'password': 'pass', 'auth_type': 'basic'}
+        init_config = {}
+        http = RequestsWrapper(instance, init_config)
+
+        assert isinstance(http.options['auth'], requests.auth.HTTPBasicAuth)
+
+    def test_config_digest_authtype(self):
+        instance = {'username': 'user', 'password': 'pass', 'auth_type': 'digest'}
+        init_config = {}
+        http = RequestsWrapper(instance, init_config)
+
+        assert isinstance(http.options['auth'], requests.auth.HTTPDigestAuth)
+    
+    def test_config_unsupported_authtype(self):
+        instance = {'username': 'user', 'password': 'pass', 'auth_type': 'other'}
+        init_config = {}
+
+        with pytest.raises(ConfigurationError):
+            RequestsWrapper(instance, init_config)
 
     def test_config_basic_only_username(self):
         instance = {'username': 'user'}
@@ -341,28 +362,6 @@ class TestAuth:
             RequestsWrapper(instance, init_config)
 
             m.assert_called_once_with('domain\\user', 'pass')
-
-class TestAuthtype:
-    def test_config_default(self):
-        instance = {}
-        init_config = {}
-        http = RequestsWrapper(instance, init_config) 
-
-        assert http.options['auth_type'] is None
-
-    def test_config_basic(self):
-        instance = {'auth_type': 'basic'}
-        init_config = {}
-        http = RequestsWrapper(instance, init_config)
-        
-        assert http.options['auth_type'] == 'basic'
-    
-    def test_config_digest(self):
-        instance = {'auth_type': 'digest'}
-        init_config = {}
-        http = RequestsWrapper(instance, init_config)
-        
-        assert http.options['auth_type'] == 'digest'
 
 class TestProxies:
     def test_config_default(self):
