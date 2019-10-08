@@ -175,8 +175,8 @@ class TestAuth:
         init_config = {}
         http = RequestsWrapper(instance, init_config)
 
-        assert isinstance(http.options['auth'], requests.auth.HTTPBasicAuth) 
-    
+        assert isinstance(http.options['auth'], requests.auth.HTTPBasicAuth)
+
     def test_config_basic_authtype(self):
         instance = {'username': 'user', 'password': 'pass', 'auth_type': 'basic'}
         init_config = {}
@@ -190,7 +190,7 @@ class TestAuth:
         http = RequestsWrapper(instance, init_config)
 
         assert isinstance(http.options['auth'], requests.auth.HTTPDigestAuth)
-    
+
     def test_config_unsupported_authtype(self):
         instance = {'username': 'user', 'password': 'pass', 'auth_type': 'other'}
         init_config = {}
@@ -362,6 +362,7 @@ class TestAuth:
             RequestsWrapper(instance, init_config)
 
             m.assert_called_once_with('domain\\user', 'pass')
+
 
 class TestProxies:
     def test_config_default(self):
